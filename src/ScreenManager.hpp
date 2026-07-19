@@ -17,7 +17,7 @@ struct ScreenInfo {
 };
 
 struct ApplyOptions {
-    int screenIndex = 0; // zero-based
+    int screenIndex = 0;
 };
 
 class ScreenManager final {
@@ -26,4 +26,4 @@ public:
     static bool apply(ApplyOptions const& options, std::string& error);
 };
 
-} // namespace selectscreen
+}

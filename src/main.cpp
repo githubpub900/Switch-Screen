@@ -1,4 +1,5 @@
 #include <Geode/Geode.hpp>
+#include <Geode/loader/SettingV3.hpp>
 #include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/CCApplication.hpp>
 #include "ScreenManager.hpp"
@@ -25,11 +26,6 @@ namespace {
         auto options = readOptions();
         if (options.screenIndex < 0) options.screenIndex = 0;
         if (options.screenIndex >= static_cast<int>(screens.size())) {
-            log::warn(
-                "Configured screen {} does not exist; using screen {}",
-                options.screenIndex + 1,
-                screens.size()
-            );
             options.screenIndex = static_cast<int>(screens.size()) - 1;
         }
 
@@ -60,10 +56,19 @@ namespace {
 
 #if !defined(GEODE_IS_WINDOWS)
     void scheduleScreenRecovery() {
-        Loader::get()->queueInMainThread([] { applyConfiguredScreen(false); });
+        Loader::get()->queueInMainThread([] {
+            applyConfiguredScreen(false);
+        });
     }
 #endif
+}
 
+$execute {
+    listenForSettingChanges<int64_t>("screen", [](int64_t) {
+        Loader::get()->queueInMainThread([] {
+            applyConfiguredScreen(true);
+        });
+    });
 }
 
 $on_mod(Loaded) {

@@ -152,8 +152,6 @@ namespace {
         if (message == WM_ACTIVATEAPP) {
             g_appActive = wParam != FALSE;
             if (g_appActive) {
-                // Only guard the short interval in which GD recreates/restores its
-                // exclusive-fullscreen swap-chain window after returning to the game.
                 g_recoveryUntil = GetTickCount64() + 2500;
             } else {
                 g_recoveryUntil = 0;
@@ -170,9 +168,6 @@ namespace {
             auto* pos = reinterpret_cast<WINDOWPOS*>(lParam);
             bool inRecovery = g_appActive && GetTickCount64() <= g_recoveryUntil;
 
-            // Do not interfere while switching away, minimizing, hiding, or with
-            // ordinary windowed-mode movement. Only rewrite a fullscreen-sized
-            // restore request during the short reactivation window.
             if (pos && inRecovery && !IsIconic(hwnd) &&
                 (pos->flags & (SWP_HIDEWINDOW | SWP_NOMOVE | SWP_NOSIZE)) == 0 &&
                 proposedFullscreenOnAnyMonitor(*pos)) {
@@ -271,4 +266,4 @@ bool ScreenManager::apply(ApplyOptions const& options, std::string& error) {
     return true;
 }
 
-} // namespace selectscreen
+}

@@ -81,4 +81,4 @@ bool ScreenManager::apply(ApplyOptions const& options, std::string& error) {
     return true;
 }
 
-} // namespace selectscreen
+}

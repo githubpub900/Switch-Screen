@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(SelectScreen VERSION 1.0.1)
+project(SelectScreen VERSION 1.0.0)
 
 add_library(${PROJECT_NAME} SHARED
     src/main.cpp
@@ -15,8 +15,6 @@ if (WIN32)
 elseif (APPLE)
     enable_language(OBJCXX)
     target_sources(${PROJECT_NAME} PRIVATE src/platform/MacScreen.mm)
-    # setup_geode_mod uses the plain target_link_libraries signature, so these
-    # must also use the plain signature rather than PRIVATE/PUBLIC keywords.
     target_link_libraries(${PROJECT_NAME} "-framework Cocoa" "-framework CoreGraphics")
 elseif (UNIX)
     target_sources(${PROJECT_NAME} PRIVATE src/platform/LinuxScreen.cpp)
