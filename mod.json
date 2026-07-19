@@ -2,51 +2,25 @@
   "geode": "5.7.1",
   "gd": {
     "win": "2.2081",
-    "mac": "2.2081",
-    "linux": "2.2081"
+    "mac": "2.2081"
   },
   "id": "rylannt.select-screen",
   "name": "Select Screen",
-  "version": "v1.0.0",
+  "version": "v1.0.1",
   "developer": "RylanNT",
-  "description": "Select which monitor Geometry Dash uses and choose windowed, exclusive fullscreen, or borderless fullscreen.",
+  "description": "Choose which monitor Geometry Dash uses while keeping the display mode selected in Geometry Dash itself.",
   "settings": {
     "screen": {
       "name": "Screen",
-      "description": "Monitor number, ordered the same way the operating system reports connected displays. Screen 1 is normally the primary display.",
+      "description": "Select the monitor Geometry Dash should use. Screen 1 is usually the primary display.",
       "type": "int",
       "default": 1,
       "min": 1,
       "max": 16,
-      "control": { "arrows": true, "slider": false }
-    },
-    "display-mode": {
-      "name": "Display Mode",
-      "description": "Exclusive changes the selected display mode. Borderless fills the selected monitor without changing its display mode.",
-      "type": "string",
-      "default": "exclusive",
-      "one-of": ["exclusive", "borderless", "windowed"]
-    },
-    "refresh-rate": {
-      "name": "Refresh Rate",
-      "description": "Exclusive fullscreen refresh rate. Use 0 to use the selected monitor's current/preferred refresh rate.",
-      "type": "int",
-      "default": 0,
-      "min": 0,
-      "max": 1000,
-      "control": { "arrows": true, "slider": false }
-    },
-    "restore-on-focus": {
-      "name": "Restore After Alt-Tab",
-      "description": "Reapply the selected monitor whenever Geometry Dash regains focus. This prevents fullscreen from returning to the primary monitor.",
-      "type": "bool",
-      "default": true
-    },
-    "apply-immediately": {
-      "name": "Apply Settings Immediately",
-      "description": "Apply screen and display-mode changes as soon as you close/change the mod settings.",
-      "type": "bool",
-      "default": true
+      "control": {
+        "arrows": true,
+        "slider": false
+      }
     }
   }
 }

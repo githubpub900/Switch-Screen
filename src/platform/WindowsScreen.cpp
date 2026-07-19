@@ -2,10 +2,14 @@
 #include <windows.h>
 #include <vector>
 #include <string>
+#include <cstdlib>
 
 namespace selectscreen {
 namespace {
-    struct MonitorEntry { HMONITOR handle; MONITORINFOEXW info; };
+    struct MonitorEntry {
+        HMONITOR handle;
+        MONITORINFOEXW info;
+    };
 
     BOOL CALLBACK enumProc(HMONITOR monitor, HDC, LPRECT, LPARAM data) {
         auto& out = *reinterpret_cast<std::vector<MonitorEntry>*>(data);
@@ -23,10 +27,12 @@ namespace {
     }
 
     HWND gameWindow() {
-        HWND window = GetActiveWindow();
+        HWND window = FindWindowW(nullptr, L"Geometry Dash");
         if (window) return window;
-        window = FindWindowW(nullptr, L"Geometry Dash");
+
+        window = GetActiveWindow();
         if (window) return window;
+
         return GetForegroundWindow();
     }
 
@@ -39,24 +45,47 @@ namespace {
         out.pop_back();
         return out;
     }
+
+    bool isFullscreenLike(HWND hwnd, RECT const& currentMonitorRect) {
+        LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+        if ((style & WS_OVERLAPPEDWINDOW) == 0 || (style & WS_POPUP) != 0) {
+            return true;
+        }
+
+        RECT rect{};
+        if (!GetWindowRect(hwnd, &rect)) return false;
+
+        constexpr int tolerance = 8;
+        return std::abs(rect.left - currentMonitorRect.left) <= tolerance &&
+               std::abs(rect.top - currentMonitorRect.top) <= tolerance &&
+               std::abs(rect.right - currentMonitorRect.right) <= tolerance &&
+               std::abs(rect.bottom - currentMonitorRect.bottom) <= tolerance;
+    }
 }
 
 std::vector<ScreenInfo> ScreenManager::enumerate() {
     std::vector<ScreenInfo> result;
     auto list = monitors();
+
     for (size_t i = 0; i < list.size(); ++i) {
         auto const& monitor = list[i];
         DEVMODEW mode{};
         mode.dmSize = sizeof(mode);
         EnumDisplaySettingsW(monitor.info.szDevice, ENUM_CURRENT_SETTINGS, &mode);
+
         auto const& rect = monitor.info.rcMonitor;
         result.push_back(ScreenInfo{
-            static_cast<int>(i), narrow(monitor.info.szDevice), rect.left, rect.top,
-            rect.right - rect.left, rect.bottom - rect.top,
+            static_cast<int>(i),
+            narrow(monitor.info.szDevice),
+            rect.left,
+            rect.top,
+            rect.right - rect.left,
+            rect.bottom - rect.top,
             static_cast<int>(mode.dmDisplayFrequency),
             (monitor.info.dwFlags & MONITORINFOF_PRIMARY) != 0
         });
     }
+
     return result;
 }
 
@@ -66,6 +95,7 @@ bool ScreenManager::apply(ApplyOptions const& options, std::string& error) {
         error = "The selected screen index is out of range.";
         return false;
     }
+
     HWND hwnd = gameWindow();
     if (!hwnd) {
         error = "Geometry Dash's native window could not be found.";
@@ -73,50 +103,53 @@ bool ScreenManager::apply(ApplyOptions const& options, std::string& error) {
     }
 
     auto const& target = list[options.screenIndex];
-    RECT rect = target.info.rcMonitor;
-    int width = rect.right - rect.left;
-    int height = rect.bottom - rect.top;
+    RECT targetRect = target.info.rcMonitor;
+    int targetWidth = targetRect.right - targetRect.left;
+    int targetHeight = targetRect.bottom - targetRect.top;
 
-    if (options.mode == DisplayMode::Windowed) {
-        ChangeDisplaySettingsExW(target.info.szDevice, nullptr, nullptr, 0, nullptr);
-        SetWindowLongPtrW(hwnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
-        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, WS_EX_APPWINDOW);
-        int w = width * 3 / 4;
-        int h = height * 3 / 4;
-        SetWindowPos(hwnd, HWND_NOTOPMOST, rect.left + (width - w) / 2, rect.top + (height - h) / 2,
-            w, h, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
-        return true;
+    HMONITOR currentMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO currentInfo{};
+    currentInfo.cbSize = sizeof(currentInfo);
+    GetMonitorInfoW(currentMonitor, &currentInfo);
+
+    RECT windowRect{};
+    if (!GetWindowRect(hwnd, &windowRect)) {
+        error = "Unable to read Geometry Dash's window position.";
+        return false;
     }
 
-    if (options.mode == DisplayMode::Exclusive) {
-        DEVMODEW mode{};
-        mode.dmSize = sizeof(mode);
-        mode.dmPelsWidth = static_cast<DWORD>(width);
-        mode.dmPelsHeight = static_cast<DWORD>(height);
-        mode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
-        if (options.refreshRate > 0) {
-            mode.dmDisplayFrequency = static_cast<DWORD>(options.refreshRate);
-            mode.dmFields |= DM_DISPLAYFREQUENCY;
-        }
-        auto status = ChangeDisplaySettingsExW(target.info.szDevice, &mode, nullptr, CDS_FULLSCREEN, nullptr);
-        if (status != DISP_CHANGE_SUCCESSFUL) {
-            error = "Windows rejected the requested exclusive fullscreen display mode (code " + std::to_string(status) + ").";
-            return false;
-        }
-    } else {
-        ChangeDisplaySettingsExW(target.info.szDevice, nullptr, nullptr, 0, nullptr);
+    bool fullscreenLike = isFullscreenLike(hwnd, currentInfo.rcMonitor);
+
+    int width = windowRect.right - windowRect.left;
+    int height = windowRect.bottom - windowRect.top;
+    int x = targetRect.left + (targetWidth - width) / 2;
+    int y = targetRect.top + (targetHeight - height) / 2;
+
+    if (fullscreenLike) {
+        x = targetRect.left;
+        y = targetRect.top;
+        width = targetWidth;
+        height = targetHeight;
     }
 
-    SetWindowLongPtrW(hwnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
-    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, WS_EX_APPWINDOW);
-    SetWindowPos(hwnd, HWND_TOP, rect.left, rect.top, width, height,
-        SWP_FRAMECHANGED | SWP_SHOWWINDOW);
-    SetForegroundWindow(hwnd);
+    // Do not change window styles, refresh rate, or fullscreen mode. Geometry Dash
+    // remains responsible for exclusive, borderless, or windowed mode; this mod only
+    // places the existing native window on the chosen monitor.
+    if (!SetWindowPos(
+            hwnd,
+            nullptr,
+            x,
+            y,
+            width,
+            height,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW
+        )) {
+        error = "Windows rejected the requested monitor position (error " +
+            std::to_string(GetLastError()) + ").";
+        return false;
+    }
+
     return true;
-}
-
-bool ScreenManager::isGameFocused() {
-    return gameWindow() == GetForegroundWindow();
 }
 
 } // namespace selectscreen

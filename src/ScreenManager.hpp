@@ -5,12 +5,6 @@
 
 namespace selectscreen {
 
-enum class DisplayMode {
-    Windowed,
-    Exclusive,
-    Borderless,
-};
-
 struct ScreenInfo {
     int index = 0;
     std::string name;
@@ -24,18 +18,12 @@ struct ScreenInfo {
 
 struct ApplyOptions {
     int screenIndex = 0; // zero-based
-    DisplayMode mode = DisplayMode::Exclusive;
-    int refreshRate = 0;
 };
 
 class ScreenManager final {
 public:
     static std::vector<ScreenInfo> enumerate();
     static bool apply(ApplyOptions const& options, std::string& error);
-    static bool isGameFocused();
 };
-
-DisplayMode parseDisplayMode(std::string const& value);
-char const* displayModeName(DisplayMode mode);
 
 } // namespace selectscreen
