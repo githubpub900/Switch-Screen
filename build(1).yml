@@ -1,0 +1,85 @@
+name: Build Select Screen
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows / Linux (Wine-Proton)
+            os: windows-latest
+            target: Win64
+            artifact: select-screen-win64-linux-proton
+          - name: macOS
+            os: macos-latest
+            target: MacOS
+            artifact: select-screen-macos
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Geode mod
+        id: build
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          sdk: given
+          target: ${{ matrix.target }}
+          build-config: Release
+          combine: true
+
+      - name: Upload platform build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ steps.build.outputs.build-output }}
+          if-no-files-found: error
+
+  package:
+    name: Package combined mod
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Combine Windows and macOS builds
+        id: combine
+        uses: geode-sdk/build-geode-mod/combine@main
+
+      - name: Upload combined .geode
+        uses: actions/upload-artifact@v4
+        with:
+          name: select-screen-all-supported-platforms
+          path: ${{ steps.combine.outputs.build-output }}
+          if-no-files-found: error
+
+  release:
+    name: Attach build to GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs: package
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download combined artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: select-screen-all-supported-platforms
+          path: release
+
+      - name: Publish release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/**
