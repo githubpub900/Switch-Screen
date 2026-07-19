@@ -58,66 +58,11 @@ namespace {
         );
     }
 
-    class ScreenRecoveryRunner : public CCNode {
-    protected:
-        int m_tick = 0;
-
-        bool init() override {
-            if (!CCNode::init()) return false;
-            this->schedule(schedule_selector(ScreenRecoveryRunner::tick), 0.05f);
-            return true;
-        }
-
-        void tick(float) {
-            ++m_tick;
-
-            // Exclusive fullscreen is commonly recreated a little after focus returns.
-            // Reapply across that restoration window instead of moving it only once.
-            if (m_tick == 1 || m_tick == 3 || m_tick == 6 || m_tick == 10 ||
-                m_tick == 16 || m_tick == 24 || m_tick == 32) {
-                applyConfiguredScreen(false);
-            }
-
-            if (m_tick >= 36) {
-                this->unschedule(schedule_selector(ScreenRecoveryRunner::tick));
-                this->removeFromParentAndCleanup(true);
-            }
-        }
-
-    public:
-        static ScreenRecoveryRunner* create() {
-            auto result = new ScreenRecoveryRunner();
-            if (result && result->init()) {
-                result->autorelease();
-                return result;
-            }
-            CC_SAFE_DELETE(result);
-            return nullptr;
-        }
-    };
-
+#if !defined(GEODE_IS_WINDOWS)
     void scheduleScreenRecovery() {
-        Loader::get()->queueInMainThread([] {
-            auto scene = CCDirector::sharedDirector()->getRunningScene();
-            if (!scene) {
-                applyConfiguredScreen(false);
-                return;
-            }
-
-            // Replace any previous recovery runner so repeated focus events do not
-            // create several overlapping correction loops.
-            constexpr int recoveryTag = 0x53534352; // "SSCR"
-            scene->removeChildByTag(recoveryTag, true);
-
-            auto runner = ScreenRecoveryRunner::create();
-            if (!runner) {
-                applyConfiguredScreen(false);
-                return;
-            }
-            runner->setTag(recoveryTag);
-            scene->addChild(runner);
-        });
+        Loader::get()->queueInMainThread([] { applyConfiguredScreen(false); });
     }
+#endif
 
 }
 
@@ -158,6 +103,7 @@ class $modify(SelectScreenMenuLayer, MenuLayer) {
     }
 };
 
+#if !defined(GEODE_IS_WINDOWS)
 class $modify(SelectScreenApplication, CCApplication) {
     void applicationWillEnterForeground() {
         CCApplication::applicationWillEnterForeground();
@@ -166,10 +112,7 @@ class $modify(SelectScreenApplication, CCApplication) {
 
     void applicationWillBecomeActive() {
         CCApplication::applicationWillBecomeActive();
-
-        // Alt+Tab normally causes an inactive/active transition without necessarily
-        // minimizing the native window. Geometry Dash may recreate exclusive fullscreen
-        // after this callback, so schedule several corrections over the next ~1.8 seconds.
         scheduleScreenRecovery();
     }
 };
+#endif
