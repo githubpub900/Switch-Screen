@@ -1,12 +1,7 @@
 # Select Screen
 
-Select which monitor Geometry Dash uses from the mod's settings.
+Select which monitor Geometry Dash uses without replacing Geometry Dash's own fullscreen or window-mode settings.
 
-## Modes
+The mod reapplies the selected monitor after the game is minimized and restored, preventing fullscreen Geometry Dash from returning to the primary monitor.
 
-* **Exclusive** - requests fullscreen on the selected monitor. On Windows this also requests the monitor's display mode and refresh rate.
-* **Borderless** - fills the selected monitor without changing its display mode.
-* **Windowed** - places a resizable window on the selected monitor.
-
-Enable **Restore After Alt-Tab** to reapply the chosen monitor whenever Geometry Dash returns to the foreground.
-
+Created by **RylanNT**.

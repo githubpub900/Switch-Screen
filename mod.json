@@ -6,7 +6,7 @@
   },
   "id": "rylannt.select-screen",
   "name": "Select Screen",
-  "version": "v1.0.1",
+  "version": "v1.0.0",
   "developer": "RylanNT",
   "description": "Choose which monitor Geometry Dash uses while keeping the display mode selected in Geometry Dash itself.",
   "settings": {
